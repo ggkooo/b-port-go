@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\ActivityType;
 use App\Models\SchoolClass;
 use App\Models\Shift;
 use App\Models\User;
@@ -331,6 +332,123 @@ class AuthApiTest extends TestCase
             ->assertJsonPath('difficulties.0.name', 'Fácil')
             ->assertJsonPath('difficulties.1.name', 'Médio')
             ->assertJsonPath('difficulties.2.name', 'Difícil');
+    }
+
+    public function test_can_list_questions_for_configuration_form(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/questions');
+
+        $response
+            ->assertOk()
+            ->assertJsonStructure([
+                'questions' => [
+                    [
+                        'id',
+                        'statement',
+                        'alternative_a',
+                        'alternative_b',
+                        'alternative_c',
+                        'alternative_d',
+                        'correct_alternative',
+                        'tip',
+                        'difficulty_id',
+                        'class_id',
+                        'activity_type_id',
+                        'difficulty' => ['id', 'name'],
+                        'school_class' => ['id', 'name'],
+                        'activity_type' => ['id', 'name', 'slug'],
+                    ],
+                ],
+            ])
+            ->assertJsonCount(525, 'questions');
+    }
+
+    public function test_can_list_activity_types_for_configuration_form(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/activity-types');
+
+        $response
+            ->assertOk()
+            ->assertJsonStructure([
+                'activity_types' => [
+                    ['id', 'name', 'slug'],
+                ],
+            ])
+            ->assertJsonCount(2, 'activity_types')
+            ->assertJsonPath('activity_types.0.slug', 'gramatica')
+            ->assertJsonPath('activity_types.1.slug', 'interpretacao-textual');
+    }
+
+    public function test_can_filter_questions_by_class_and_difficulty(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/questions?class_id=1&difficulty_id=1');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(25, 'questions');
+    }
+
+    public function test_can_filter_random_questions_by_class_difficulty_and_quantity(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/questions?class_id=1&difficulty_id=1&quantity=10');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(10, 'questions');
+
+        $questions = $response->json('questions');
+
+        $this->assertIsArray($questions);
+
+        foreach ($questions as $question) {
+            $this->assertSame(1, $question['class_id']);
+            $this->assertSame(1, $question['difficulty_id']);
+            $this->assertContains($question['correct_alternative'], ['a', 'b', 'c', 'd']);
+        }
+    }
+
+    public function test_can_filter_questions_by_activity_type(): void
+    {
+        $activityTypeId = (int) ActivityType::query()
+            ->where('slug', 'gramatica')
+            ->value('id');
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/questions?class_id=1&difficulty_id=1&activity_type_id='.$activityTypeId);
+
+        $response->assertOk();
+
+        $questions = $response->json('questions');
+
+        $this->assertIsArray($questions);
+        $this->assertNotEmpty($questions);
+
+        foreach ($questions as $question) {
+            $this->assertSame(1, $question['class_id']);
+            $this->assertSame(1, $question['difficulty_id']);
+            $this->assertSame($activityTypeId, $question['activity_type_id']);
+            $this->assertSame('gramatica', $question['activity_type']['slug']);
+        }
+    }
+
+    public function test_questions_endpoint_validates_quantity_and_filters(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/questions?class_id=999&difficulty_id=999&activity_type_id=999&quantity=0');
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['class_id', 'difficulty_id', 'activity_type_id', 'quantity']);
     }
 
     public function test_profile_fetch_requires_authentication_and_does_not_redirect(): void

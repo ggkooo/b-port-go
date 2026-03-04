@@ -8,7 +8,8 @@ This repository exposes endpoints for:
 - password recovery and reset;
 - profile retrieval and update;
 - helper data listing (school classes, shifts, difficulties);
-- question listing and filtering.
+- question listing and filtering;
+- user daily lesson streak tracking.
 
 ## Table of Contents
 
@@ -254,6 +255,15 @@ Relevant API fields:
 Seed data is generated in migration with `25` questions for each class × difficulty combination,
 totaling `525` questions (7 classes × 3 difficulties × 25).
 
+#### `user_streaks`
+
+- `id`
+- `user_id` (unique, FK -> `users.id`)
+- `last_lesson_date` (nullable)
+- `current_streak` (unsigned integer)
+- `best_streak` (unsigned integer)
+- `created_at`, `updated_at`
+
 ### Eloquent relationships
 
 - `User` belongs to `SchoolClass` (`class`) and `Shift` (`shift`)
@@ -261,6 +271,8 @@ totaling `525` questions (7 classes × 3 difficulties × 25).
 - `Shift` has many `User`
 - `Difficulty` has many `Question`
 - `Question` belongs to `Difficulty` and `SchoolClass`
+- `User` has one `UserStreak`
+- `UserStreak` belongs to `User`
 
 ## API Documentation
 
@@ -673,6 +685,85 @@ Common errors:
 
 ---
 
+## Streak
+
+Tracks consecutive days where the user completed at least one lesson.
+
+### `GET /api/users/{uuid}/streak`
+
+Returns streak summary for the user.
+
+Success (`200`):
+
+```json
+{
+  "user_uuid": "user-uuid",
+  "current_streak": 4,
+  "best_streak": 7,
+  "last_lesson_date": "2026-03-04",
+  "lesson_done_today": true
+}
+```
+
+### `GET /api/users/{uuid}/streak/check-today`
+
+Checks whether the user has already completed a lesson today.
+
+Success (`200`):
+
+```json
+{
+  "user_uuid": "user-uuid",
+  "date": "2026-03-04",
+  "lesson_done_today": true,
+  "last_lesson_date": "2026-03-04"
+}
+```
+
+### `PATCH /api/users/{uuid}/streak/complete-today`
+
+Registers today's lesson completion for streak calculation.
+
+Rules:
+
+- if user already completed today, streak is not incremented (idempotent);
+- if last completion was yesterday, `current_streak` is incremented;
+- otherwise, `current_streak` is reset to `1`;
+- `best_streak` is updated when `current_streak` exceeds it.
+
+Success (`200`):
+
+```json
+{
+  "message": "Lição do dia registrada com sucesso.",
+  "user_uuid": "user-uuid",
+  "current_streak": 4,
+  "best_streak": 7,
+  "last_lesson_date": "2026-03-04",
+  "lesson_done_today": true
+}
+```
+
+Same-day repeated call (`200`):
+
+```json
+{
+  "message": "Lição de hoje já registrada.",
+  "user_uuid": "user-uuid",
+  "current_streak": 4,
+  "best_streak": 7,
+  "last_lesson_date": "2026-03-04",
+  "lesson_done_today": true
+}
+```
+
+Common errors:
+
+- `401` invalid API key
+- `404` user UUID not found
+
+---
+
 ## Standard Errors and Responses
 
 ### `401 Unauthorized`
@@ -723,6 +814,7 @@ Can happen on `firstOrFail()` lookups (for example: UUID not found).
 Main API contracts are covered in:
 
 - `tests/Feature/Api/AuthApiTest.php`
+- `tests/Feature/Api/UserStreakApiTest.php`
 
 This file validates:
 
@@ -733,6 +825,13 @@ This file validates:
 - classes/shifts/difficulties listing
 - question listing and filters
 - expected error responses (`401` and `422`)
+
+`UserStreakApiTest.php` validates:
+
+- streak summary retrieval
+- idempotent same-day completion
+- consecutive-day increment
+- today completion check
 
 Run all tests:
 

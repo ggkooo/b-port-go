@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ActivityTypeController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DailyChallengeController;
 use App\Http\Controllers\Api\DifficultyController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\QuestionController;
@@ -20,6 +21,8 @@ Route::middleware('api.key')->group(function (): void {
     Route::get('/difficulties', [DifficultyController::class, 'index']);
     Route::get('/activity-types', [ActivityTypeController::class, 'index']);
     Route::get('/questions', [QuestionController::class, 'index']);
+    Route::get('/users/{uuid}/challenges/today', [DailyChallengeController::class, 'today']);
+    Route::patch('/users/{uuid}/challenges/{dailyChallenge}/progress', [DailyChallengeController::class, 'updateProgress']);
     Route::get('/profile/{uuid}', [ProfileController::class, 'profile'])->middleware('auth:sanctum');
     Route::patch('/profile', [ProfileController::class, 'updateProfile'])->middleware('auth:sanctum');
 });

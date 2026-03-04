@@ -314,6 +314,25 @@ class AuthApiTest extends TestCase
             ->assertJsonPath('shifts.0.name', 'Manhã');
     }
 
+    public function test_can_list_difficulties_for_configuration_form(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/difficulties');
+
+        $response
+            ->assertOk()
+            ->assertJsonStructure([
+                'difficulties' => [
+                    ['id', 'name'],
+                ],
+            ])
+            ->assertJsonCount(3, 'difficulties')
+            ->assertJsonPath('difficulties.0.name', 'Fácil')
+            ->assertJsonPath('difficulties.1.name', 'Médio')
+            ->assertJsonPath('difficulties.2.name', 'Difícil');
+    }
+
     public function test_profile_fetch_requires_authentication_and_does_not_redirect(): void
     {
         $user = User::factory()->create();

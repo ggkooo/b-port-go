@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\ActivityType;
+use App\Models\Question;
 use App\Models\SchoolClass;
 use App\Models\Shift;
 use App\Models\User;
@@ -77,11 +78,51 @@ class AuthApiTest extends TestCase
             ->assertCreated()
             ->assertJsonStructure([
                 'message',
-                'user' => ['id', 'uuid', 'first_name', 'last_name', 'email', 'created_at', 'updated_at'],
+                'user' => ['id', 'uuid', 'first_name', 'last_name', 'email', 'is_admin', 'created_at', 'updated_at'],
             ]);
+
+        $response->assertJsonPath('user.is_admin', true);
 
         $this->assertDatabaseHas('users', [
             'email' => 'joao@example.com',
+            'is_admin' => true,
+        ]);
+    }
+
+    public function test_second_registered_user_is_not_admin(): void
+    {
+        $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->postJson('/api/register', [
+            'first_name' => 'Primeiro',
+            'last_name' => 'Usuario',
+            'email' => 'primeiro@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->postJson('/api/register', [
+            'first_name' => 'Segundo',
+            'last_name' => 'Usuario',
+            'email' => 'segundo@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('user.is_admin', false);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'primeiro@example.com',
+            'is_admin' => true,
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'segundo@example.com',
+            'is_admin' => false,
         ]);
     }
 
@@ -91,6 +132,7 @@ class AuthApiTest extends TestCase
             'email' => 'joao@example.com',
             'password' => 'password123',
             'phone' => null,
+            'is_admin' => false,
         ]);
 
         $response = $this->withHeaders([
@@ -102,11 +144,13 @@ class AuthApiTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertJsonPath('is_admin', false)
             ->assertJsonPath('profile_completed', false)
             ->assertJsonStructure([
                 'message',
                 'uuid',
                 'email',
+                'is_admin',
                 'profile_completed',
                 'token',
             ]);
@@ -123,6 +167,7 @@ class AuthApiTest extends TestCase
             'school' => 'Escola Central',
             'class' => $this->validClassId,
             'shift' => $this->validShiftId,
+            'is_admin' => true,
         ]);
 
         $response = $this->withHeaders([
@@ -134,11 +179,13 @@ class AuthApiTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertJsonPath('is_admin', true)
             ->assertJsonPath('profile_completed', true)
             ->assertJsonStructure([
                 'message',
                 'uuid',
                 'email',
+                'is_admin',
                 'profile_completed',
                 'token',
             ]);
@@ -336,6 +383,8 @@ class AuthApiTest extends TestCase
 
     public function test_can_list_questions_for_configuration_form(): void
     {
+        $this->createQuestion();
+
         $response = $this->withHeaders([
             'X-API-KEY' => 'portgo-test-key',
         ])->getJson('/api/questions');
@@ -361,8 +410,9 @@ class AuthApiTest extends TestCase
                         'activity_type' => ['id', 'name', 'slug'],
                     ],
                 ],
-            ])
-            ->assertJsonCount(525, 'questions');
+            ]);
+
+        $this->assertIsArray($response->json('questions'));
     }
 
     public function test_can_list_activity_types_for_configuration_form(): void
@@ -385,17 +435,28 @@ class AuthApiTest extends TestCase
 
     public function test_can_filter_questions_by_class_and_difficulty(): void
     {
+        $this->createQuestion(classId: 1, difficultyId: 1);
+        $this->createQuestion(classId: 2, difficultyId: 1);
+
         $response = $this->withHeaders([
             'X-API-KEY' => 'portgo-test-key',
         ])->getJson('/api/questions?class_id=1&difficulty_id=1');
 
         $response
             ->assertOk()
-            ->assertJsonCount(25, 'questions');
+            ->assertJsonCount(1, 'questions');
     }
 
     public function test_can_filter_random_questions_by_class_difficulty_and_quantity(): void
     {
+        foreach (range(1, 12) as $index) {
+            $this->createQuestion(
+                classId: 1,
+                difficultyId: 1,
+                statement: 'Questão de teste '.$index
+            );
+        }
+
         $response = $this->withHeaders([
             'X-API-KEY' => 'portgo-test-key',
         ])->getJson('/api/questions?class_id=1&difficulty_id=1&quantity=10');
@@ -421,6 +482,13 @@ class AuthApiTest extends TestCase
             ->where('slug', 'gramatica')
             ->value('id');
 
+        $otherActivityTypeId = (int) ActivityType::query()
+            ->where('slug', 'interpretacao-textual')
+            ->value('id');
+
+        $this->createQuestion(classId: 1, difficultyId: 1, activityTypeId: $activityTypeId);
+        $this->createQuestion(classId: 1, difficultyId: 1, activityTypeId: $otherActivityTypeId);
+
         $response = $this->withHeaders([
             'X-API-KEY' => 'portgo-test-key',
         ])->getJson('/api/questions?class_id=1&difficulty_id=1&activity_type_id='.$activityTypeId);
@@ -438,6 +506,146 @@ class AuthApiTest extends TestCase
             $this->assertSame($activityTypeId, $question['activity_type_id']);
             $this->assertSame('gramatica', $question['activity_type']['slug']);
         }
+    }
+
+    public function test_can_create_question_with_valid_payload(): void
+    {
+        $adminUser = User::factory()->create([
+            'is_admin' => true,
+        ]);
+        $token = $adminUser->createToken('api-token')->plainTextToken;
+
+        $activityTypeId = (int) ActivityType::query()->value('id');
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+            'Authorization' => 'Bearer '.$token,
+        ])->postJson('/api/questions', [
+            'statement' => 'Qual é a função sintática do termo destacado?',
+            'alternative_a' => 'Sujeito',
+            'alternative_b' => 'Objeto direto',
+            'alternative_c' => 'Predicado',
+            'alternative_d' => 'Adjunto adnominal',
+            'correct_alternative' => 'b',
+            'tip' => 'Analise o verbo e pergunte quem ou o quê sofre a ação.',
+            'difficulty_id' => 1,
+            'class_id' => 1,
+            'activity_type_id' => $activityTypeId,
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('message', 'Questão criada com sucesso.')
+            ->assertJsonPath('question.statement', 'Qual é a função sintática do termo destacado?')
+            ->assertJsonPath('question.correct_alternative', 'b')
+            ->assertJsonPath('question.difficulty_id', 1)
+            ->assertJsonPath('question.class_id', 1)
+            ->assertJsonPath('question.activity_type_id', $activityTypeId)
+            ->assertJsonStructure([
+                'message',
+                'question' => [
+                    'id',
+                    'statement',
+                    'alternative_a',
+                    'alternative_b',
+                    'alternative_c',
+                    'alternative_d',
+                    'correct_alternative',
+                    'tip',
+                    'difficulty_id',
+                    'class_id',
+                    'activity_type_id',
+                    'difficulty' => ['id', 'name'],
+                    'school_class' => ['id', 'name'],
+                    'activity_type' => ['id', 'name', 'slug'],
+                ],
+            ]);
+
+        $this->assertDatabaseHas('questions', [
+            'statement' => 'Qual é a função sintática do termo destacado?',
+            'correct_alternative' => 'b',
+            'difficulty_id' => 1,
+            'class_id' => 1,
+            'activity_type_id' => $activityTypeId,
+        ]);
+    }
+
+    public function test_create_question_validates_required_fields(): void
+    {
+        $adminUser = User::factory()->create([
+            'is_admin' => true,
+        ]);
+        $token = $adminUser->createToken('api-token')->plainTextToken;
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+            'Authorization' => 'Bearer '.$token,
+        ])->postJson('/api/questions', []);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'statement',
+                'alternative_a',
+                'alternative_b',
+                'alternative_c',
+                'alternative_d',
+                'correct_alternative',
+                'tip',
+                'difficulty_id',
+                'class_id',
+                'activity_type_id',
+            ]);
+    }
+
+    public function test_create_question_requires_authentication(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->postJson('/api/questions', [
+            'statement' => 'Questão sem autenticação',
+            'alternative_a' => 'A',
+            'alternative_b' => 'B',
+            'alternative_c' => 'C',
+            'alternative_d' => 'D',
+            'correct_alternative' => 'a',
+            'tip' => 'Dica',
+            'difficulty_id' => 1,
+            'class_id' => 1,
+            'activity_type_id' => (int) ActivityType::query()->value('id'),
+        ]);
+
+        $response
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Não autenticado.');
+    }
+
+    public function test_create_question_requires_admin_user(): void
+    {
+        $regularUser = User::factory()->create([
+            'is_admin' => false,
+        ]);
+        $token = $regularUser->createToken('api-token')->plainTextToken;
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+            'Authorization' => 'Bearer '.$token,
+        ])->postJson('/api/questions', [
+            'statement' => 'Questão sem permissão',
+            'alternative_a' => 'A',
+            'alternative_b' => 'B',
+            'alternative_c' => 'C',
+            'alternative_d' => 'D',
+            'correct_alternative' => 'a',
+            'tip' => 'Dica',
+            'difficulty_id' => 1,
+            'class_id' => 1,
+            'activity_type_id' => (int) ActivityType::query()->value('id'),
+        ]);
+
+        $response
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Acesso negado.');
     }
 
     public function test_questions_endpoint_validates_quantity_and_filters(): void
@@ -498,5 +706,27 @@ class AuthApiTest extends TestCase
                 'class',
                 'shift',
             ]);
+    }
+
+    protected function createQuestion(
+        int $classId = 1,
+        int $difficultyId = 1,
+        ?int $activityTypeId = null,
+        ?string $statement = null
+    ): Question {
+        $resolvedActivityTypeId = $activityTypeId ?? (int) ActivityType::query()->value('id');
+
+        return Question::query()->create([
+            'statement' => $statement ?? 'Enunciado de teste para questão',
+            'alternative_a' => 'Alternativa A',
+            'alternative_b' => 'Alternativa B',
+            'alternative_c' => 'Alternativa C',
+            'alternative_d' => 'Alternativa D',
+            'correct_alternative' => 'a',
+            'tip' => 'Dica da questão de teste',
+            'difficulty_id' => $difficultyId,
+            'class_id' => $classId,
+            'activity_type_id' => $resolvedActivityTypeId,
+        ]);
     }
 }

@@ -4,11 +4,28 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ListQuestionsRequest;
+use App\Http\Requests\Api\StoreQuestionRequest;
 use App\Models\Question;
 use Illuminate\Http\JsonResponse;
 
 class QuestionController extends Controller
 {
+    public function store(StoreQuestionRequest $request): JsonResponse
+    {
+        $question = Question::query()->create($request->validated());
+
+        $question->load([
+            'difficulty:id,name',
+            'schoolClass:id,name',
+            'activityType:id,name,slug',
+        ]);
+
+        return response()->json([
+            'message' => 'Questão criada com sucesso.',
+            'question' => $question,
+        ], 201);
+    }
+
     public function index(ListQuestionsRequest $request): JsonResponse
     {
         $questionsQuery = Question::query()

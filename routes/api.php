@@ -21,6 +21,7 @@ Route::middleware('api.key')->group(function (): void {
     Route::get('/shifts', [ShiftController::class, 'index']);
     Route::get('/difficulties', [DifficultyController::class, 'index']);
     Route::get('/activity-types', [ActivityTypeController::class, 'index']);
+    Route::post('/questions', [QuestionController::class, 'store'])->middleware(['auth:sanctum', 'admin']);
     Route::get('/questions', [QuestionController::class, 'index']);
     Route::get('/users/{uuid}/challenges/today', [DailyChallengeController::class, 'today']);
     Route::patch('/users/{uuid}/challenges/{dailyChallenge}/progress', [DailyChallengeController::class, 'updateProgress']);

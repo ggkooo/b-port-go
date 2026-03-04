@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'portgo' => [
+        'api_key' => env('PORTGO_API_KEY'),
+    ],
+
 ];

@@ -23,6 +23,7 @@ class Question extends Model
         'tip',
         'difficulty_id',
         'class_id',
+        'activity_type_id',
     ];
 
     public function difficulty(): BelongsTo
@@ -33,5 +34,10 @@ class Question extends Model
     public function schoolClass(): BelongsTo
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    public function activityType(): BelongsTo
+    {
+        return $this->belongsTo(ActivityType::class);
     }
 }

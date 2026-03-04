@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ActivityTypeController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DifficultyController;
 use App\Http\Controllers\Api\ProfileController;
@@ -17,6 +18,7 @@ Route::middleware('api.key')->group(function (): void {
     Route::get('/classes', [SchoolClassController::class, 'index']);
     Route::get('/shifts', [ShiftController::class, 'index']);
     Route::get('/difficulties', [DifficultyController::class, 'index']);
+    Route::get('/activity-types', [ActivityTypeController::class, 'index']);
     Route::get('/questions', [QuestionController::class, 'index']);
     Route::get('/profile/{uuid}', [ProfileController::class, 'profile'])->middleware('auth:sanctum');
     Route::patch('/profile', [ProfileController::class, 'updateProfile'])->middleware('auth:sanctum');

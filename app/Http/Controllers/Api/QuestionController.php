@@ -15,6 +15,7 @@ class QuestionController extends Controller
             ->with([
                 'difficulty:id,name',
                 'schoolClass:id,name',
+                'activityType:id,name,slug',
             ]);
 
         if ($request->filled('difficulty_id')) {
@@ -23,6 +24,10 @@ class QuestionController extends Controller
 
         if ($request->filled('class_id')) {
             $questionsQuery->where('class_id', (int) $request->integer('class_id'));
+        }
+
+        if ($request->filled('activity_type_id')) {
+            $questionsQuery->where('activity_type_id', (int) $request->integer('activity_type_id'));
         }
 
         $questionsQuery->inRandomOrder();
@@ -42,6 +47,7 @@ class QuestionController extends Controller
             'tip',
             'difficulty_id',
             'class_id',
+            'activity_type_id',
         ]);
 
         return response()->json([

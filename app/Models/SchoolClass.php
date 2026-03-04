@@ -23,4 +23,9 @@ class SchoolClass extends Model
     {
         return $this->hasMany(User::class, 'class');
     }
+
+    public function questions(): HasMany
+    {
+        return $this->hasMany(Question::class, 'class_id');
+    }
 }

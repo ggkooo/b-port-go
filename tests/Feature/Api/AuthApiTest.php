@@ -333,6 +333,78 @@ class AuthApiTest extends TestCase
             ->assertJsonPath('difficulties.2.name', 'Difícil');
     }
 
+    public function test_can_list_questions_for_configuration_form(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/questions');
+
+        $response
+            ->assertOk()
+            ->assertJsonStructure([
+                'questions' => [
+                    [
+                        'id',
+                        'statement',
+                        'alternative_a',
+                        'alternative_b',
+                        'alternative_c',
+                        'alternative_d',
+                        'correct_alternative',
+                        'tip',
+                        'difficulty_id',
+                        'class_id',
+                        'difficulty' => ['id', 'name'],
+                        'school_class' => ['id', 'name'],
+                    ],
+                ],
+            ])
+            ->assertJsonCount(525, 'questions');
+    }
+
+    public function test_can_filter_questions_by_class_and_difficulty(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/questions?class_id=1&difficulty_id=1');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(25, 'questions');
+    }
+
+    public function test_can_filter_random_questions_by_class_difficulty_and_quantity(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/questions?class_id=1&difficulty_id=1&quantity=10');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(10, 'questions');
+
+        $questions = $response->json('questions');
+
+        $this->assertIsArray($questions);
+
+        foreach ($questions as $question) {
+            $this->assertSame(1, $question['class_id']);
+            $this->assertSame(1, $question['difficulty_id']);
+            $this->assertContains($question['correct_alternative'], ['a', 'b', 'c', 'd']);
+        }
+    }
+
+    public function test_questions_endpoint_validates_quantity_and_filters(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->getJson('/api/questions?class_id=999&difficulty_id=999&quantity=0');
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['class_id', 'difficulty_id', 'quantity']);
+    }
+
     public function test_profile_fetch_requires_authentication_and_does_not_redirect(): void
     {
         $user = User::factory()->create();

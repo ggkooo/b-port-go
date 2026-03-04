@@ -9,7 +9,6 @@ use App\Http\Requests\Api\RegisterRequest;
 use App\Http\Requests\Api\ResetPasswordRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -90,29 +89,21 @@ class AuthController extends Controller
 
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
-        $user = User::query()->where('email', $request->string('email')->toString())->first();
+        $status = Password::reset(
+            $request->only(['email', 'password', 'password_confirmation', 'token']),
+            function (User $user, string $password): void {
+                $user->forceFill([
+                    'password' => $password,
+                    'remember_token' => Str::random(60),
+                ])->save();
+            }
+        );
 
-        if (! $user) {
-            return response()->json([
-                'message' => 'Usuário não encontrado.',
-            ], 404);
-        }
-
-        // Verificar se o token é válido
-        $token = DB::table('password_reset_tokens')->where('email', $request->string('email')->toString())->first();
-
-        if (! $token || ! hash_equals($request->string('token')->toString(), $token->token)) {
+        if ($status !== Password::PASSWORD_RESET) {
             return response()->json([
                 'message' => 'Token inválido ou expirado.',
             ], 400);
         }
-
-        // Atualizar a senha
-        $user->password = $request->string('password')->toString();
-        $user->save();
-
-        // Deletar o token após uso
-        DB::table('password_reset_tokens')->where('email', $request->string('email')->toString())->delete();
 
         return response()->json([
             'message' => 'Senha redefinida com sucesso.',

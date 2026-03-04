@@ -29,6 +29,14 @@ class ResetPasswordRequest extends FormRequest
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function validationData(): array
+    {
+        return $this->isJson() ? $this->json()->all() : [];
+    }
+
+    /**
      * @return array<string, string>
      */
     public function messages(): array

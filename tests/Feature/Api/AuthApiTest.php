@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
 
 class AuthApiTest extends TestCase
@@ -70,5 +73,51 @@ class AuthApiTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'joao@example.com',
         ]);
+    }
+
+    public function test_user_can_reset_password_with_json_payload(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'joao@example.com',
+            'password' => 'old-password-123',
+        ]);
+
+        $token = Password::broker()->createToken($user);
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->postJson('/api/reset-password', [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('message', 'Senha redefinida com sucesso.');
+
+        $this->assertTrue(Hash::check('new-password-123', $user->fresh()->password));
+    }
+
+    public function test_reset_password_does_not_accept_token_and_email_only_as_query_params(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'joao@example.com',
+            'password' => 'old-password-123',
+        ]);
+
+        $token = Password::broker()->createToken($user);
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->postJson('/api/reset-password?token='.$token.'&email='.urlencode($user->email), [
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['token', 'email']);
     }
 }

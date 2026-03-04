@@ -62,15 +62,6 @@ class AuthController extends Controller
         ]);
     }
 
-    public function show(string $uuid): JsonResponse
-    {
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
-
-        return response()->json([
-            'user' => $user,
-        ]);
-    }
-
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
         $status = Password::sendResetLink(

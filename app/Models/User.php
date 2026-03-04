@@ -64,4 +64,27 @@ class User extends Authenticatable
     {
         $this->notify(new ResetPasswordNotification($token, $this->email));
     }
+
+    public function hasCompletedProfile(): bool
+    {
+        $requiredFields = [
+            'first_name',
+            'last_name',
+            'email',
+            'phone',
+            'state',
+            'city',
+            'school',
+            'class',
+            'shift',
+        ];
+
+        foreach ($requiredFields as $field) {
+            if (blank($this->getAttribute($field))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

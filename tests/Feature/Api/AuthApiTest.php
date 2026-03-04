@@ -75,6 +75,77 @@ class AuthApiTest extends TestCase
         ]);
     }
 
+    public function test_login_returns_profile_completed_false_when_profile_is_incomplete(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'joao@example.com',
+            'password' => 'password123',
+            'phone' => null,
+        ]);
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->postJson('/api/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('profile_completed', false)
+            ->assertJsonStructure([
+                'message',
+                'uuid',
+                'email',
+                'profile_completed',
+                'token',
+            ]);
+    }
+
+    public function test_login_returns_profile_completed_true_when_profile_is_complete(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'maria@example.com',
+            'password' => 'password123',
+            'phone' => '11999999999',
+            'state' => 'SP',
+            'city' => 'São Paulo',
+            'school' => 'Escola Central',
+            'class' => '3A',
+            'shift' => 'morning',
+        ]);
+
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->postJson('/api/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('profile_completed', true)
+            ->assertJsonStructure([
+                'message',
+                'uuid',
+                'email',
+                'profile_completed',
+                'token',
+            ]);
+    }
+
+    public function test_login_validation_errors_return_json_without_redirect(): void
+    {
+        $response = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->post('/api/login', []);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Os dados informados são inválidos.')
+            ->assertJsonValidationErrors(['email', 'password']);
+    }
+
     public function test_user_can_reset_password_with_json_payload(): void
     {
         $user = User::factory()->create([

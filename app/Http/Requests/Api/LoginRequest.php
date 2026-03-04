@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Api;
 
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class LoginRequest extends FormRequest
 {
@@ -26,5 +28,13 @@ class LoginRequest extends FormRequest
             'email.email' => 'Informe um e-mail válido.',
             'password.required' => 'A senha é obrigatória.',
         ];
+    }
+
+    protected function failedValidation(Validator $validator): void
+    {
+        throw new HttpResponseException(response()->json([
+            'message' => 'Os dados informados são inválidos.',
+            'errors' => $validator->errors(),
+        ], 422));
     }
 }

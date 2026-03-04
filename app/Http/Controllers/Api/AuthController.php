@@ -57,6 +57,7 @@ class AuthController extends Controller
             'message' => 'Login realizado com sucesso.',
             'uuid' => $user->uuid,
             'email' => $user->email,
+            'profile_completed' => $user->hasCompletedProfile(),
             'token' => $token,
         ]);
     }

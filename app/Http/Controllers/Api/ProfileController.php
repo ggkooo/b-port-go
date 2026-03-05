@@ -12,7 +12,7 @@ class ProfileController extends Controller
 {
     public function show(string $uuid): JsonResponse
     {
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
+        $user = User::findByUuidOrFail($uuid);
 
         return response()->json([
             'user' => $user,

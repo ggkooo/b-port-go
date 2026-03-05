@@ -11,7 +11,7 @@ class UserStreakController extends Controller
 {
     public function show(string $uuid): JsonResponse
     {
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
+        $user = User::findByUuidOrFail($uuid);
         $streak = $this->resolveStreak($user);
         $today = now()->toDateString();
 
@@ -26,7 +26,7 @@ class UserStreakController extends Controller
 
     public function checkToday(string $uuid): JsonResponse
     {
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
+        $user = User::findByUuidOrFail($uuid);
         $streak = $this->resolveStreak($user);
         $today = now()->toDateString();
 
@@ -40,7 +40,7 @@ class UserStreakController extends Controller
 
     public function completeToday(string $uuid): JsonResponse
     {
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
+        $user = User::findByUuidOrFail($uuid);
         $streak = $this->resolveStreak($user);
 
         $today = now()->toDateString();

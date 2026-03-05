@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\UpdateDailyChallengeProgressRequest;
+use App\Http\Requests\Api\UpdateDailyChallengeRequest;
 use App\Models\Challenge;
 use App\Models\DailyChallenge;
 use App\Models\User;
@@ -24,6 +25,31 @@ class DailyChallengeController extends Controller
             'date' => now()->toDateString(),
             'count' => $challenges->count(),
             'challenges' => $challenges,
+        ]);
+    }
+
+    public function index(): JsonResponse
+    {
+        $dailyChallenges = DailyChallenge::query()
+            ->orderBy('challenge_date', 'desc')
+            ->orderBy('position')
+            ->get([
+                'id',
+                'user_id',
+                'challenge_id',
+                'challenge_name',
+                'unit',
+                'target_value',
+                'current_value',
+                'xp_reward',
+                'challenge_date',
+                'position',
+                'completed_at',
+            ]);
+
+        return response()->json([
+            'count' => $dailyChallenges->count(),
+            'daily_challenges' => $dailyChallenges,
         ]);
     }
 
@@ -187,5 +213,26 @@ class DailyChallengeController extends Controller
             ->where('user_id', $user->id)
             ->whereDate('challenge_date', '<', now()->subDay()->toDateString())
             ->delete();
+    }
+
+    public function update(UpdateDailyChallengeRequest $request, DailyChallenge $dailyChallenge): JsonResponse
+    {
+        $dailyChallenge->update($request->validated());
+
+        $dailyChallenge->makeHidden(['user_id']);
+
+        return response()->json([
+            'message' => 'Desafio diário atualizado com sucesso.',
+            'daily_challenge' => $dailyChallenge,
+        ]);
+    }
+
+    public function destroy(DailyChallenge $dailyChallenge): JsonResponse
+    {
+        $dailyChallenge->delete();
+
+        return response()->json([
+            'message' => 'Desafio diário deletado com sucesso.',
+        ]);
     }
 }

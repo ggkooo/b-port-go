@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\ActivityTypeController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChallengeController;
+use App\Http\Controllers\Api\ChallengeTypeController;
 use App\Http\Controllers\Api\DailyChallengeController;
 use App\Http\Controllers\Api\DifficultyController;
 use App\Http\Controllers\Api\ProfileController;
@@ -22,12 +24,18 @@ Route::middleware('api.key')->group(function (): void {
     Route::get('/shifts', [ShiftController::class, 'index']);
     Route::get('/difficulties', [DifficultyController::class, 'index']);
     Route::get('/activity-types', [ActivityTypeController::class, 'index']);
+    Route::get('/challenge-types', [ChallengeTypeController::class, 'index']);
     Route::get('/statistics/overview', [StatisticsController::class, 'overview']);
     Route::post('/questions', [QuestionController::class, 'store'])->middleware(['auth:sanctum', 'admin']);
     Route::get('/questions', [QuestionController::class, 'index']);
     Route::get('/questions/{question}', [QuestionController::class, 'show']);
     Route::patch('/questions/{question}', [QuestionController::class, 'update'])->middleware(['auth:sanctum', 'admin']);
     Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])->middleware(['auth:sanctum', 'admin']);
+    Route::post('/challenges', [ChallengeController::class, 'store'])->middleware(['auth:sanctum', 'admin']);
+    Route::get('/challenges', [ChallengeController::class, 'index']);
+    Route::get('/challenges/{challenge}', [ChallengeController::class, 'show']);
+    Route::patch('/challenges/{challenge}', [ChallengeController::class, 'update'])->middleware(['auth:sanctum', 'admin']);
+    Route::delete('/challenges/{challenge}', [ChallengeController::class, 'destroy'])->middleware(['auth:sanctum', 'admin']);
     Route::get('/users/{uuid}/challenges/today', [DailyChallengeController::class, 'today']);
     Route::patch('/users/{uuid}/challenges/{dailyChallenge}/progress', [DailyChallengeController::class, 'updateProgress']);
     Route::get('/users/{uuid}/streak', [UserStreakController::class, 'show']);

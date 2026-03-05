@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ActivityTypeController;
+use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChallengeController;
 use App\Http\Controllers\Api\ChallengeTypeController;
@@ -43,4 +44,13 @@ Route::middleware('api.key')->group(function (): void {
     Route::get('/users/{uuid}/streak/check-today', [UserStreakController::class, 'checkToday']);
     Route::get('/profile/{uuid}', [ProfileController::class, 'profile'])->middleware('auth:sanctum');
     Route::patch('/profile', [ProfileController::class, 'updateProfile'])->middleware('auth:sanctum');
+
+    Route::middleware(['admin'])->group(function (): void {
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::post('/users', [AdminUserController::class, 'store']);
+        Route::patch('/users/{user:uuid}', [AdminUserController::class, 'update']);
+        Route::delete('/users/{user:uuid}', [AdminUserController::class, 'destroy']);
+        Route::patch('/users/{user:uuid}/promote', [AdminUserController::class, 'promoteToAdmin']);
+        Route::patch('/users/{user:uuid}/remove-admin', [AdminUserController::class, 'removeAdmin']);
+    });
 });

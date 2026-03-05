@@ -11,31 +11,33 @@ use Illuminate\Support\Str;
 
 class AdminUserController extends Controller
 {
+    /**
+     * @var list<string>
+     */
+    private const USER_COLUMNS = [
+        'id',
+        'uuid',
+        'name',
+        'first_name',
+        'last_name',
+        'email',
+        'phone',
+        'state',
+        'city',
+        'school',
+        'class',
+        'shift',
+        'is_admin',
+        'created_at',
+        'updated_at',
+    ];
+
     public function index(): JsonResponse
     {
         $users = User::query()
-            ->with([
-                'schoolClass:id,name',
-                'schoolShift:id,name',
-            ])
+            ->withAdminRelations()
             ->orderBy('id')
-            ->get([
-                'id',
-                'uuid',
-                'name',
-                'first_name',
-                'last_name',
-                'email',
-                'phone',
-                'state',
-                'city',
-                'school',
-                'class',
-                'shift',
-                'is_admin',
-                'created_at',
-                'updated_at',
-            ]);
+            ->get(self::USER_COLUMNS);
 
         return response()->json([
             'users' => $users,
@@ -56,7 +58,7 @@ class AdminUserController extends Controller
             'is_admin' => false,
         ]);
 
-        $user->load([
+        $user->loadMissing([
             'schoolClass:id,name',
             'schoolShift:id,name',
         ]);
@@ -79,7 +81,7 @@ class AdminUserController extends Controller
 
         $user->update($validated);
 
-        $user->load([
+        $user->loadMissing([
             'schoolClass:id,name',
             'schoolShift:id,name',
         ]);

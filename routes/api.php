@@ -16,34 +16,59 @@ use App\Http\Controllers\Api\UserStreakController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('api.key')->group(function (): void {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/users/{uuid}', [ProfileController::class, 'show']);
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::controller(AuthController::class)->group(function (): void {
+        Route::post('/register', 'register');
+        Route::post('/login', 'login');
+        Route::post('/forgot-password', 'forgotPassword');
+        Route::post('/reset-password', 'resetPassword');
+    });
+
+    Route::controller(ProfileController::class)->group(function (): void {
+        Route::get('/users/{uuid}', 'show');
+    });
+
     Route::get('/classes', [SchoolClassController::class, 'index']);
     Route::get('/shifts', [ShiftController::class, 'index']);
     Route::get('/difficulties', [DifficultyController::class, 'index']);
     Route::get('/activity-types', [ActivityTypeController::class, 'index']);
     Route::get('/challenge-types', [ChallengeTypeController::class, 'index']);
     Route::get('/statistics/overview', [StatisticsController::class, 'overview']);
-    Route::post('/questions', [QuestionController::class, 'store'])->middleware(['auth:sanctum', 'admin']);
-    Route::get('/questions', [QuestionController::class, 'index']);
-    Route::get('/questions/{question}', [QuestionController::class, 'show']);
-    Route::patch('/questions/{question}', [QuestionController::class, 'update'])->middleware(['auth:sanctum', 'admin']);
-    Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])->middleware(['auth:sanctum', 'admin']);
-    Route::post('/challenges', [ChallengeController::class, 'store'])->middleware(['auth:sanctum', 'admin']);
-    Route::get('/challenges', [ChallengeController::class, 'index']);
-    Route::get('/challenges/{challenge}', [ChallengeController::class, 'show']);
-    Route::patch('/challenges/{challenge}', [ChallengeController::class, 'update'])->middleware(['auth:sanctum', 'admin']);
-    Route::delete('/challenges/{challenge}', [ChallengeController::class, 'destroy'])->middleware(['auth:sanctum', 'admin']);
-    Route::get('/users/{uuid}/challenges/today', [DailyChallengeController::class, 'today']);
-    Route::patch('/users/{uuid}/challenges/{dailyChallenge}/progress', [DailyChallengeController::class, 'updateProgress']);
-    Route::get('/users/{uuid}/streak', [UserStreakController::class, 'show']);
-    Route::patch('/users/{uuid}/streak/complete-today', [UserStreakController::class, 'completeToday']);
-    Route::get('/users/{uuid}/streak/check-today', [UserStreakController::class, 'checkToday']);
-    Route::get('/profile/{uuid}', [ProfileController::class, 'profile'])->middleware('auth:sanctum');
-    Route::patch('/profile', [ProfileController::class, 'updateProfile'])->middleware('auth:sanctum');
+
+    Route::controller(QuestionController::class)->group(function (): void {
+        Route::get('/questions', 'index');
+        Route::get('/questions/{question}', 'show');
+    });
+
+    Route::controller(ChallengeController::class)->group(function (): void {
+        Route::get('/challenges', 'index');
+        Route::get('/challenges/{challenge}', 'show');
+    });
+
+    Route::middleware(['auth:sanctum', 'admin'])->group(function (): void {
+        Route::post('/questions', [QuestionController::class, 'store']);
+        Route::patch('/questions/{question}', [QuestionController::class, 'update']);
+        Route::delete('/questions/{question}', [QuestionController::class, 'destroy']);
+
+        Route::post('/challenges', [ChallengeController::class, 'store']);
+        Route::patch('/challenges/{challenge}', [ChallengeController::class, 'update']);
+        Route::delete('/challenges/{challenge}', [ChallengeController::class, 'destroy']);
+    });
+
+    Route::controller(DailyChallengeController::class)->group(function (): void {
+        Route::get('/users/{uuid}/challenges/today', 'today');
+        Route::patch('/users/{uuid}/challenges/{dailyChallenge}/progress', 'updateProgress');
+    });
+
+    Route::controller(UserStreakController::class)->group(function (): void {
+        Route::get('/users/{uuid}/streak', 'show');
+        Route::patch('/users/{uuid}/streak/complete-today', 'completeToday');
+        Route::get('/users/{uuid}/streak/check-today', 'checkToday');
+    });
+
+    Route::middleware('auth:sanctum')->group(function (): void {
+        Route::get('/profile/{uuid}', [ProfileController::class, 'profile']);
+        Route::patch('/profile', [ProfileController::class, 'updateProfile']);
+    });
 
     Route::middleware(['admin'])->group(function (): void {
         Route::get('/users', [AdminUserController::class, 'index']);

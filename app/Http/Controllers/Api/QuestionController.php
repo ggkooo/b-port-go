@@ -11,15 +11,20 @@ use Illuminate\Http\JsonResponse;
 
 class QuestionController extends Controller
 {
+    /**
+     * @var list<string>
+     */
+    private const DETAIL_RELATIONS = [
+        'difficulty:id,name',
+        'schoolClass:id,name',
+        'activityType:id,name,slug',
+    ];
+
     public function store(StoreQuestionRequest $request): JsonResponse
     {
         $question = Question::query()->create($request->validated());
 
-        $question->load([
-            'difficulty:id,name',
-            'schoolClass:id,name',
-            'activityType:id,name,slug',
-        ]);
+        $question->load(self::DETAIL_RELATIONS);
 
         return response()->json([
             'message' => 'Questão criada com sucesso.',
@@ -29,11 +34,7 @@ class QuestionController extends Controller
 
     public function show(Question $question): JsonResponse
     {
-        $question->load([
-            'difficulty:id,name',
-            'schoolClass:id,name',
-            'activityType:id,name,slug',
-        ]);
+        $question->load(self::DETAIL_RELATIONS);
 
         return response()->json([
             'question' => $question,
@@ -43,11 +44,7 @@ class QuestionController extends Controller
     public function index(ListQuestionsRequest $request): JsonResponse
     {
         $questionsQuery = Question::query()
-            ->with([
-                'difficulty:id,name',
-                'schoolClass:id,name',
-                'activityType:id,name,slug',
-            ]);
+            ->with(self::DETAIL_RELATIONS);
 
         if ($request->filled('difficulty_id')) {
             $questionsQuery->where('difficulty_id', (int) $request->integer('difficulty_id'));
@@ -90,11 +87,7 @@ class QuestionController extends Controller
     {
         $question->update($request->validated());
 
-        $question->load([
-            'difficulty:id,name',
-            'schoolClass:id,name',
-            'activityType:id,name,slug',
-        ]);
+        $question->load(self::DETAIL_RELATIONS);
 
         return response()->json([
             'message' => 'Questão atualizada com sucesso.',

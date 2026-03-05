@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\ResetPasswordNotification;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -62,6 +63,21 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'password' => 'hashed',
         ];
+    }
+
+    public static function findByUuidOrFail(string $uuid): self
+    {
+        return static::query()
+            ->where('uuid', $uuid)
+            ->firstOrFail();
+    }
+
+    public function scopeWithAdminRelations(Builder $query): Builder
+    {
+        return $query->with([
+            'schoolClass:id,name',
+            'schoolShift:id,name',
+        ]);
     }
 
     public function schoolClass(): BelongsTo

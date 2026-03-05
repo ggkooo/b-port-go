@@ -13,9 +13,26 @@ use Illuminate\Http\JsonResponse;
 
 class DailyChallengeController extends Controller
 {
+    /**
+     * @var list<string>
+     */
+    private const DAILY_CHALLENGE_COLUMNS = [
+        'id',
+        'user_id',
+        'challenge_id',
+        'challenge_name',
+        'unit',
+        'target_value',
+        'current_value',
+        'xp_reward',
+        'challenge_date',
+        'position',
+        'completed_at',
+    ];
+
     public function today(string $uuid): JsonResponse
     {
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
+        $user = User::findByUuidOrFail($uuid);
 
         $this->pruneOlderThanTwoDays($user);
         $challenges = $this->ensureTodayChallenges($user);
@@ -33,19 +50,7 @@ class DailyChallengeController extends Controller
         $dailyChallenges = DailyChallenge::query()
             ->orderBy('challenge_date', 'desc')
             ->orderBy('position')
-            ->get([
-                'id',
-                'user_id',
-                'challenge_id',
-                'challenge_name',
-                'unit',
-                'target_value',
-                'current_value',
-                'xp_reward',
-                'challenge_date',
-                'position',
-                'completed_at',
-            ]);
+            ->get(self::DAILY_CHALLENGE_COLUMNS);
 
         return response()->json([
             'count' => $dailyChallenges->count(),
@@ -55,7 +60,7 @@ class DailyChallengeController extends Controller
 
     public function updateProgress(UpdateDailyChallengeProgressRequest $request, string $uuid, DailyChallenge $dailyChallenge): JsonResponse
     {
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
+        $user = User::findByUuidOrFail($uuid);
         $today = now()->toDateString();
 
         abort_unless(
@@ -192,19 +197,7 @@ class DailyChallengeController extends Controller
             ->where('user_id', $user->id)
             ->whereDate('challenge_date', now()->toDateString())
             ->orderBy('position')
-            ->get([
-                'id',
-                'user_id',
-                'challenge_id',
-                'challenge_name',
-                'unit',
-                'target_value',
-                'current_value',
-                'xp_reward',
-                'challenge_date',
-                'position',
-                'completed_at',
-            ]);
+            ->get(self::DAILY_CHALLENGE_COLUMNS);
     }
 
     protected function pruneOlderThanTwoDays(User $user): void

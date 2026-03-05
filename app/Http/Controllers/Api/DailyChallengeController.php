@@ -8,6 +8,7 @@ use App\Http\Requests\Api\UpdateDailyChallengeRequest;
 use App\Models\Challenge;
 use App\Models\DailyChallenge;
 use App\Models\User;
+use App\Models\UserXp;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 
@@ -62,6 +63,7 @@ class DailyChallengeController extends Controller
     {
         $user = User::findByUuidOrFail($uuid);
         $today = now()->toDateString();
+        $awardedXp = false;
 
         abort_unless(
             $dailyChallenge->user_id === $user->id
@@ -75,10 +77,25 @@ class DailyChallengeController extends Controller
                 $dailyChallenge->target_value
             );
 
+            $justCompleted = $newValue >= $dailyChallenge->target_value;
+
             $dailyChallenge->forceFill([
                 'current_value' => $newValue,
-                'completed_at' => $newValue >= $dailyChallenge->target_value ? now() : null,
+                'completed_at' => $justCompleted ? now() : null,
             ])->save();
+
+            if ($justCompleted) {
+                $userXp = UserXp::query()->firstOrCreate(
+                    ['user_id' => $user->id],
+                    ['xp_amount' => 0]
+                );
+
+                $userXp->forceFill([
+                    'xp_amount' => $userXp->xp_amount + $dailyChallenge->xp_reward,
+                ])->save();
+
+                $awardedXp = true;
+            }
         }
 
         $challenges = $this->loadTodayChallenges($user);
@@ -86,6 +103,7 @@ class DailyChallengeController extends Controller
         return response()->json([
             'user_uuid' => $user->uuid,
             'date' => $today,
+            'awarded_xp' => $awardedXp ? $dailyChallenge->xp_reward : 0,
             'count' => $challenges->count(),
             'challenges' => $challenges,
         ]);

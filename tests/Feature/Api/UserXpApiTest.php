@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\DailyChallenge;
 use App\Models\User;
 use App\Models\UserStreak;
 use App\Models\UserXp;
@@ -112,4 +113,51 @@ class UserXpApiTest extends TestCase
             ->assertJsonPath('logged_user.xp_amount', 1);
     }
 
+    public function test_completing_daily_challenge_awards_xp_only_once(): void
+    {
+        $user = User::factory()->create();
+
+        $dailyChallenge = DailyChallenge::query()->create([
+            'user_id' => $user->id,
+            'challenge_id' => null,
+            'challenge_name' => 'Ler conteúdo',
+            'unit' => 'vezes',
+            'target_value' => 10,
+            'current_value' => 9,
+            'xp_reward' => 30,
+            'challenge_date' => now()->toDateString(),
+            'position' => 1,
+            'completed_at' => null,
+        ]);
+
+        $firstResponse = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->patchJson('/api/users/'.$user->uuid.'/challenges/'.$dailyChallenge->id.'/progress', [
+            'increment' => 1,
+        ]);
+
+        $firstResponse
+            ->assertOk()
+            ->assertJsonPath('awarded_xp', 30);
+
+        $this->assertDatabaseHas('user_xps', [
+            'user_id' => $user->id,
+            'xp_amount' => 30,
+        ]);
+
+        $secondResponse = $this->withHeaders([
+            'X-API-KEY' => 'portgo-test-key',
+        ])->patchJson('/api/users/'.$user->uuid.'/challenges/'.$dailyChallenge->id.'/progress', [
+            'increment' => 1,
+        ]);
+
+        $secondResponse
+            ->assertOk()
+            ->assertJsonPath('awarded_xp', 0);
+
+        $this->assertDatabaseHas('user_xps', [
+            'user_id' => $user->id,
+            'xp_amount' => 30,
+        ]);
+    }
 }

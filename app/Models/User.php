@@ -34,6 +34,7 @@ class User extends Authenticatable
         'school',
         'class',
         'shift',
+        'is_admin',
         'password',
     ];
 
@@ -58,6 +59,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'class' => 'integer',
             'shift' => 'integer',
+            'is_admin' => 'boolean',
             'password' => 'hashed',
         ];
     }

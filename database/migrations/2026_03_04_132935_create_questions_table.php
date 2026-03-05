@@ -22,6 +22,7 @@ return new class extends Migration
             $table->text('tip');
             $table->foreignId('difficulty_id')->constrained('difficulties');
             $table->foreignId('class_id')->constrained('classes');
+            $table->unsignedBigInteger('activity_type_id');
             $table->timestamps();
         });
     }

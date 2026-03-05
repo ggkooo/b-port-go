@@ -19,6 +19,7 @@ class AuthController extends Controller
     {
         $firstName = $request->string('first_name')->toString();
         $lastName = $request->string('last_name')->toString();
+        $isFirstUser = User::query()->doesntExist();
 
         $user = User::query()->create([
             'uuid' => (string) Str::uuid(),
@@ -32,6 +33,7 @@ class AuthController extends Controller
             'school' => null,
             'class' => null,
             'shift' => null,
+            'is_admin' => $isFirstUser,
             'password' => $request->string('password')->toString(),
         ]);
 
@@ -57,6 +59,7 @@ class AuthController extends Controller
             'message' => 'Login realizado com sucesso.',
             'uuid' => $user->uuid,
             'email' => $user->email,
+            'is_admin' => (bool) $user->is_admin,
             'profile_completed' => $user->hasCompletedProfile(),
             'token' => $token,
         ]);

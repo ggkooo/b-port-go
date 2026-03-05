@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ActivityTypeController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\ChallengeController;
 use App\Http\Controllers\Api\ChallengeTypeController;
 use App\Http\Controllers\Api\DailyChallengeController;
@@ -44,6 +45,10 @@ Route::middleware('api.key')->group(function (): void {
         Route::get('/challenges/{challenge}', 'show');
     });
 
+    Route::controller(CalendarEventController::class)->group(function (): void {
+        Route::post('/calendar-events/by-month', 'byMonth');
+    });
+
     Route::middleware(['auth:sanctum', 'admin'])->group(function (): void {
         Route::post('/questions', [QuestionController::class, 'store']);
         Route::patch('/questions/{question}', [QuestionController::class, 'update']);
@@ -52,6 +57,10 @@ Route::middleware('api.key')->group(function (): void {
         Route::post('/challenges', [ChallengeController::class, 'store']);
         Route::patch('/challenges/{challenge}', [ChallengeController::class, 'update']);
         Route::delete('/challenges/{challenge}', [ChallengeController::class, 'destroy']);
+
+        Route::post('/calendar-events', [CalendarEventController::class, 'store']);
+        Route::patch('/calendar-events/{calendarEvent}', [CalendarEventController::class, 'update']);
+        Route::delete('/calendar-events/{calendarEvent}', [CalendarEventController::class, 'destroy']);
     });
 
     Route::controller(DailyChallengeController::class)->group(function (): void {

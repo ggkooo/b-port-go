@@ -100,6 +100,11 @@ class User extends Authenticatable
         return $this->hasOne(UserStreak::class);
     }
 
+    public function xp(): HasOne
+    {
+        return $this->hasOne(UserXp::class);
+    }
+
     /**
      * Send the password reset notification.
      */

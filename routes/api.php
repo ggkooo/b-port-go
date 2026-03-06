@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\SchoolClassController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\StatisticsController;
 use App\Http\Controllers\Api\UserStreakController;
+use App\Http\Controllers\Api\UserXpController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('api.key')->group(function (): void {
@@ -77,6 +78,8 @@ Route::middleware('api.key')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/profile/{uuid}', [ProfileController::class, 'profile']);
         Route::patch('/profile', [ProfileController::class, 'updateProfile']);
+        Route::patch('/users/{uuid}/xp', [UserXpController::class, 'update']);
+        Route::get('/ranking', [UserXpController::class, 'ranking']);
     });
 
     Route::middleware(['admin'])->group(function (): void {
